@@ -1,0 +1,25 @@
+# Phantom (last exploit)
+
+## Description
+last is vulnerable to a Stack Overflow when processing malformed wtmp/btmp
+files. The overflow occurs in the is_phantom function when the utmpx->ut_line is
+not NULL terminated. A pre-requisite to reach the vulnerable code is that the
+user in the ut_user field must be present in /etc/passwd. The ut_user field will
+most likely be where your return address for the function will be stored, but
+the ut_user field may also flow into the ut_host field.
+
+## Usage
+
+Steps to exploit vulnerable systems (tested on a raspberry pi)...
+1) Build phantom (experiment with offsets, etc.)
+2) Patch /etc/passwd (for now)
+3) generate exploit
+4) exploit
+
+```
+gcc phantom.c -o phantom
+./phantom
+[patch with necessary user]
+./phantom
+./last -f mtmp [repeat as necessary, for ASLR]
+```
