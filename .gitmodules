@@ -1,0 +1,3 @@
+[submodule "util-linux"]
+	path = util-linux
+	url = https://github.com/karelzak/util-linux.git
