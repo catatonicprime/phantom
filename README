@@ -15,11 +15,9 @@ This has been debeloped on a raspberry pi running Raspbian.
 
 ```
 sudo apt install autoconf
-git clone https://github.com/karelzak/util-linux.git && cd util-linux
-git checkout v2.35.2
+git clone --recurse-submodules https://github.com/catatonicprime/phantom && cd phantom/util-linux
 ./autogen.sh
-CFLAGS="-ggdb -fno-stack-protector -O0 -z execstack" ./configure
-make last
+CFLAGS="-ggdb -fno-stack-protector -O0 -z execstack" ./configure && make -j 4 last && mv last ../
 ```
 
 ## Usage
@@ -30,6 +28,7 @@ Steps to exploit vulnerable systems (tested on a raspberry pi)...
 3) exploit
 
 ```
+echo 0 | sudo tee /proc/sys/kernel/randomize_va_space # disable ASLR
 gcc phantom.c -o phantom
 ./phantom
 [patch with necessary user]
