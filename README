@@ -26,9 +26,8 @@ make last
 
 Steps to exploit vulnerable systems (tested on a raspberry pi)...
 1) Build phantom (experiment with offsets, etc.)
-2) Patch /etc/passwd (for now)
-3) generate exploit
-4) exploit
+2) Patch /etc/passwd (for now), this can be done as root by running phantom like so: ```./phantom >> /etc/passwd```
+3) exploit
 
 ```
 gcc phantom.c -o phantom
